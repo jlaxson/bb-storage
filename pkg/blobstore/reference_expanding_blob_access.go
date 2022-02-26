@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 
+	gcs_storage "cloud.google.com/go/storage"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
@@ -20,12 +21,16 @@ import (
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	drive "google.golang.org/api/drive/v3"
 )
 
 type referenceExpandingBlobAccess struct {
 	blobAccess              BlobAccess
 	httpClient              *http.Client
 	s3Client                cloud_aws.S3Client
+	gcsClient               *gcs_storage.Client
+	googleDriveClient       *drive.Service
 	maximumMessageSizeBytes int
 }
 
@@ -43,11 +48,13 @@ func getHTTPRangeHeader(reference *icas.Reference) string {
 // Storage (CAS) backend. Any object requested through this BlobAccess
 // will cause its reference to be loaded from the ICAS, followed by
 // fetching its data from the referenced location.
-func NewReferenceExpandingBlobAccess(blobAccess BlobAccess, httpClient *http.Client, s3Client cloud_aws.S3Client, maximumMessageSizeBytes int) BlobAccess {
+func NewReferenceExpandingBlobAccess(blobAccess BlobAccess, httpClient *http.Client, s3Client cloud_aws.S3Client, gcsClient *gcs_storage.Client, googleDriveClient *drive.Service, maximumMessageSizeBytes int) BlobAccess {
 	return &referenceExpandingBlobAccess{
 		blobAccess:              blobAccess,
 		httpClient:              httpClient,
 		s3Client:                s3Client,
+		gcsClient:               gcsClient,
+		googleDriveClient:       googleDriveClient,
 		maximumMessageSizeBytes: maximumMessageSizeBytes,
 	}
 }
@@ -60,38 +67,9 @@ func (ba *referenceExpandingBlobAccess) Get(ctx context.Context, digest digest.D
 	}
 	reference := referenceMessage.(*icas.Reference)
 
-	// Load the object from the appropriate data store.
-	var r io.ReadCloser
-	switch medium := reference.Medium.(type) {
-	case *icas.Reference_HttpUrl:
-		// Download the object through HTTP.
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, medium.HttpUrl, nil)
-		if err != nil {
-			return buffer.NewBufferFromError(util.StatusWrapWithCode(err, codes.Internal, "Failed to create HTTP request"))
-		}
-		req.Header.Add("Range", getHTTPRangeHeader(reference))
-		resp, err := ba.httpClient.Do(req)
-		if err != nil {
-			return buffer.NewBufferFromError(util.StatusWrapWithCode(err, codes.Internal, "HTTP request failed"))
-		}
-		if resp.StatusCode != http.StatusPartialContent {
-			resp.Body.Close()
-			return buffer.NewBufferFromError(status.Errorf(codes.Internal, "HTTP request failed with status %#v", resp.Status))
-		}
-		r = resp.Body
-	case *icas.Reference_S3_:
-		// Download the object from S3.
-		getObjectOutput, err := ba.s3Client.GetObject(ctx, &s3.GetObjectInput{
-			Bucket: aws.String(medium.S3.Bucket),
-			Key:    aws.String(medium.S3.Key),
-			Range:  aws.String(getHTTPRangeHeader(reference)),
-		})
-		if err != nil {
-			return buffer.NewBufferFromError(util.StatusWrapWithCode(err, codes.Internal, "S3 request failed"))
-		}
-		r = getObjectOutput.Body
-	default:
-		return buffer.NewBufferFromError(status.Error(codes.Unimplemented, "Reference uses an unsupported medium"))
+	r, err := ba.GetReader(reference)
+	if err != nil {
+		return buffer.NewBufferFromError(util.StatusWrap(err, "Failed to fetch reference"))
 	}
 
 	// Apply a decompressor if needed.
@@ -134,9 +112,70 @@ func (ba *referenceExpandingBlobAccess) Get(ctx context.Context, digest digest.D
 	return buffer.NewCASBufferFromReader(digest, r, buffer.BackendProvided(buffer.Irreparable(digest)))
 }
 
+<<<<<<< HEAD
 func (ba *referenceExpandingBlobAccess) GetFromComposite(ctx context.Context, parentDigest, childDigest digest.Digest, slicer slicing.BlobSlicer) buffer.Buffer {
 	b, _ := slicer.Slice(ba.Get(ctx, parentDigest), childDigest)
 	return b
+=======
+func (ba *referenceExpandingBlobAccess) GetReader(reference *icas.Reference) (io.ReadCloser, error) {
+	// Load the object from the appropriate data store.
+	var r io.ReadCloser
+	ctx := context.TODO()
+	switch medium := reference.Medium.(type) {
+	case *icas.Reference_HttpUrl:
+		// Download the object through HTTP.
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, medium.HttpUrl, nil)
+		if err != nil {
+			return nil, util.StatusWrapWithCode(err, codes.Internal, "Failed to create HTTP request")
+		}
+		req.Header.Add("Range", getHTTPRangeHeader(reference))
+		resp, err := ba.httpClient.Do(req)
+		if err != nil {
+			return nil, util.StatusWrapWithCode(err, codes.Internal, "HTTP request failed")
+		}
+		if resp.StatusCode != http.StatusPartialContent {
+			resp.Body.Close()
+			return nil, status.Errorf(codes.Internal, "HTTP request failed with status %#v", resp.Status)
+		}
+		r = resp.Body
+	case *icas.Reference_S3_:
+		// Download the object from S3.
+		getObjectOutput, err := ba.s3Client.GetObject(ctx, &s3.GetObjectInput{
+			Bucket: aws.String(medium.S3.Bucket),
+			Key:    aws.String(medium.S3.Key),
+			Range:  aws.String(getHTTPRangeHeader(reference)),
+		})
+		if err != nil {
+			return nil, util.StatusWrapWithCode(err, codes.Internal, "S3 request failed")
+		}
+		r = getObjectOutput.Body
+	case *icas.Reference_Gcs_:
+		var length int64 = -1
+		if sizeBytes := reference.SizeBytes; sizeBytes > 0 {
+			length = sizeBytes
+		}
+		reader, err := ba.gcsClient.Bucket(medium.Gcs.Bucket).Object(medium.Gcs.Key).NewRangeReader(ctx, reference.OffsetBytes, length)
+		if err != nil {
+			return nil, util.StatusWrapWithCode(err, codes.Internal, "GCS request failed")
+		}
+		r = reader
+	case *icas.Reference_GoogleDrive_:
+		file := ba.googleDriveClient.Files.Get(medium.GoogleDrive.Id).SupportsAllDrives(true)
+		file.Header().Add("Range", getHTTPRangeHeader(reference))
+		resp, err := file.Download()
+		if err != nil {
+			return nil, util.StatusWrapWithCode(err, codes.Internal, "Drive HTTP request failed")
+		}
+		if resp.StatusCode != http.StatusPartialContent {
+			resp.Body.Close()
+			return nil, status.Errorf(codes.Internal, "Drive HTTP request failed with status %#v", resp.Status)
+		}
+		r = resp.Body
+	default:
+		return nil, status.Error(codes.Unimplemented, "Reference uses an unsupported medium")
+	}
+	return r, nil
+>>>>>>> c4013f0 (icas work)
 }
 
 func (ba *referenceExpandingBlobAccess) Put(ctx context.Context, digest digest.Digest, b buffer.Buffer) error {

@@ -1,9 +1,11 @@
 package configuration
 
 import (
+	"context"
 	"net/http"
 	"sync"
 
+	gcs_storage "cloud.google.com/go/storage"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/buildbarn/bb-storage/pkg/blobstore"
@@ -11,12 +13,14 @@ import (
 	"github.com/buildbarn/bb-storage/pkg/blobstore/local"
 	"github.com/buildbarn/bb-storage/pkg/capabilities"
 	"github.com/buildbarn/bb-storage/pkg/cloud/aws"
+	"github.com/buildbarn/bb-storage/pkg/cloud/google"
 	"github.com/buildbarn/bb-storage/pkg/digest"
 	"github.com/buildbarn/bb-storage/pkg/grpc"
 	bb_http "github.com/buildbarn/bb-storage/pkg/http"
 	pb "github.com/buildbarn/bb-storage/pkg/proto/configuration/blobstore"
 	"github.com/buildbarn/bb-storage/pkg/util"
 	"github.com/google/uuid"
+	drive "google.golang.org/api/drive/v3"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -117,6 +121,19 @@ func (bac *casBlobAccessCreator) NewCustomBlobAccess(configuration *pb.BlobAcces
 		if err != nil {
 			return BlobAccessInfo{}, "", util.StatusWrap(err, "Failed to create AWS config")
 		}
+		googleOptions, err := google.OptionsFromConfiguration(backend.ReferenceExpanding.Google, "GoogleReferenceExpandingBlobAccess")
+		if err != nil {
+			return BlobAccessInfo{}, "", util.StatusWrap(err, "Failed to create GCS config")
+		}
+		gcs, err := gcs_storage.NewClient(context.TODO(), googleOptions...)
+		if err != nil {
+			return BlobAccessInfo{}, "", util.StatusWrap(err, "Failed to create GCS client")
+		}
+		drive, err := drive.NewService(context.TODO(), googleOptions...)
+		if err != nil {
+			return BlobAccessInfo{}, "", util.StatusWrap(err, "Failed to create Google Drive client")
+		}
+
 		roundTripper, err := bb_http.NewRoundTripperFromConfiguration(backend.ReferenceExpanding.HttpClient)
 		if err != nil {
 			return BlobAccessInfo{}, "", util.StatusWrap(err, "Failed to create HTTP client")
@@ -128,6 +145,8 @@ func (bac *casBlobAccessCreator) NewCustomBlobAccess(configuration *pb.BlobAcces
 					Transport: bb_http.NewMetricsRoundTripper(roundTripper, "HTTPReferenceExpandingBlobAccess"),
 				},
 				s3.NewFromConfig(cfg),
+				gcs,
+				drive,
 				bac.maximumMessageSizeBytes),
 			DigestKeyFormat: base.DigestKeyFormat,
 		}, "reference_expanding", nil

@@ -44,6 +44,16 @@ message Reference {
     string key = 2;
   }
 
+  message Gcs {
+    string bucket = 1;
+
+    string key = 2;
+  }
+
+  message GoogleDrive {
+    string id = 1;
+  }
+
   oneof medium {
     // A HTTP location where the object may be retrieved. The server
     // corresponding with this URL must support HTTP range requests.
@@ -51,6 +61,10 @@ message Reference {
 
     // A location in S3 where the object may be retrieved.
     S3 s3 = 2;
+
+    Gcs gcs = 7;
+
+    GoogleDrive google_drive = 8;
   }
 
   // The leading amount of data that should be skipped when reading from

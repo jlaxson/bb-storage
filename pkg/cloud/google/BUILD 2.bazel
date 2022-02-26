@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "google",
+    srcs = ["config.go"],
+    importpath = "github.com/buildbarn/bb-storage/pkg/cloud/google",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/proto/configuration/cloud/google",
+        "@org_golang_google_api//option",
+    ],
+)
