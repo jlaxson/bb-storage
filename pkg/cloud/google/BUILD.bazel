@@ -6,11 +6,7 @@ go_library(
     importpath = "github.com/buildbarn/bb-storage/pkg/cloud/google",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/http",
         "//pkg/proto/configuration/cloud/google",
-        "//pkg/util",
         "@org_golang_google_api//option",
-        "@org_golang_google_grpc//codes",
-        "@org_golang_google_grpc//status",
     ],
 )

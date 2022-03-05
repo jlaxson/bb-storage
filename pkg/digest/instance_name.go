@@ -3,7 +3,6 @@ package digest
 import (
 	"crypto/md5"
 	"crypto/sha1"
-	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/binary"
 	"encoding/hex"
@@ -13,6 +12,7 @@ import (
 	"strings"
 
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
+	"github.com/minio/sha256-simd"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

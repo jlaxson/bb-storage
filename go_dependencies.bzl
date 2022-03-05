@@ -559,6 +559,12 @@ def go_dependencies():
         version = "v1.15.13",
     )
     go_repository(
+        name = "com_github_klauspost_cpuid_v2",
+        importpath = "github.com/klauspost/cpuid/v2",
+        sum = "h1:g0I61F2K2DjRHz1cnxlkNSBIaePVoJIjjnHui8QHbiw=",
+        version = "v2.0.4",
+    )
+    go_repository(
         name = "com_github_konsorten_go_windows_terminal_sequences",
         importpath = "github.com/konsorten/go-windows-terminal-sequences",
         sum = "h1:CE8S1cTafDpPvMhIxNJKvHsGVBgn1xWYf1NbHQhywc8=",
@@ -611,6 +617,12 @@ def go_dependencies():
         importpath = "github.com/matttproud/golang_protobuf_extensions",
         sum = "h1:4hp9jkHxhMHkqkrB3Ix0jegS5sx/RkqARlsWZ6pIwiU=",
         version = "v1.0.1",
+    )
+    go_repository(
+        name = "com_github_minio_sha256_simd",
+        importpath = "github.com/minio/sha256-simd",
+        sum = "h1:v1ta+49hkWZyvaKwrQB8elexRqm6Y0aMLjCNsrYxo6g=",
+        version = "v1.0.0",
     )
     go_repository(
         name = "com_github_modern_go_concurrent",

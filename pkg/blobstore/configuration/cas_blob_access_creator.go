@@ -125,11 +125,11 @@ func (bac *casBlobAccessCreator) NewCustomBlobAccess(configuration *pb.BlobAcces
 		if err != nil {
 			return BlobAccessInfo{}, "", util.StatusWrap(err, "Failed to create GCS config")
 		}
-		gcs, err := gcs_storage.NewClient(context.TODO(), googleOptions...)
+		gcs, err := gcs_storage.NewClient(context.Background(), googleOptions...)
 		if err != nil {
 			return BlobAccessInfo{}, "", util.StatusWrap(err, "Failed to create GCS client")
 		}
-		drive, err := drive.NewService(context.TODO(), googleOptions...)
+		drive, err := drive.NewService(context.Background(), googleOptions...)
 		if err != nil {
 			return BlobAccessInfo{}, "", util.StatusWrap(err, "Failed to create Google Drive client")
 		}

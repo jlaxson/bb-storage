@@ -35,6 +35,8 @@ func TestReferenceExpandingBlobAccessGet(t *testing.T) {
 		baseBlobAccess,
 		&http.Client{Transport: roundTripper},
 		s3Client,
+		nil,
+		nil,
 		100)
 	helloDigest := digest.MustNewDigest("instance", "8b1a9953c4611296a827abf8c47804d7", 5)
 
@@ -334,6 +336,8 @@ func TestReferenceExpandingBlobAccessPut(t *testing.T) {
 		baseBlobAccess,
 		&http.Client{Transport: roundTripper},
 		s3Client,
+		nil,
+		nil,
 		100)
 
 	t.Run("Failure", func(t *testing.T) {
@@ -363,6 +367,8 @@ func TestReferenceExpandingBlobAccessFindMissing(t *testing.T) {
 		baseBlobAccess,
 		&http.Client{Transport: roundTripper},
 		s3Client,
+		nil,
+		nil,
 		100)
 
 	digests := digest.NewSetBuilder().

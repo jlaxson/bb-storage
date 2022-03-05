@@ -15,6 +15,7 @@ import (
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/buildbarn/bb-storage/pkg/util"
 	"github.com/google/uuid"
+	sha256_simd "github.com/minio/sha256-simd"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -348,7 +349,7 @@ func getHasherFactory(hashLength int) func() hash.Hash {
 	case sha1.Size * 2:
 		return sha1.New
 	case sha256.Size * 2:
-		return sha256.New
+		return sha256_simd.New
 	case sha512.Size384 * 2:
 		return sha512.New384
 	case sha512.Size * 2:

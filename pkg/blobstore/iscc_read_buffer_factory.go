@@ -3,12 +3,9 @@ package blobstore
 import (
 	"io"
 
-	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/buildbarn/bb-storage/pkg/blobstore/buffer"
 	"github.com/buildbarn/bb-storage/pkg/digest"
 	"github.com/buildbarn/bb-storage/pkg/proto/iscc"
-
-	"google.golang.org/protobuf/proto"
 )
 
 type isccReadBufferFactory struct{}
@@ -38,18 +35,18 @@ var ISCCReadBufferFactory ReadBufferFactory = isccReadBufferFactory{}
 // digest, even if their input roots differ. This should be an adequate
 // heuristic for grouping actions with similar performance
 // characteristics.
-func ISCCGetReducedActionDigest(digestFunction digest.Function, action *remoteexecution.Action) (digest.Digest, error) {
-	data, err := proto.Marshal(&remoteexecution.Action{
-		CommandDigest: action.CommandDigest,
-		Platform:      action.Platform,
-	})
-	if err != nil {
-		return digest.BadDigest, err
-	}
+// func ISCCGetReducedActionDigest(digestFunction digest.Function, action *remoteexecution.Action) (digest.Digest, error) {
+// 	data, err := proto.Marshal(&remoteexecution.Action{
+// 		CommandDigest: action.CommandDigest,
+// 		Platform:      action.Platform,
+// 	})
+// 	if err != nil {
+// 		return digest.BadDigest, err
+// 	}
 
-	digestGenerator := digestFunction.NewGenerator()
-	if _, err := digestGenerator.Write(data); err != nil {
-		panic(err)
-	}
-	return digestGenerator.Sum(), nil
-}
+// 	digestGenerator := digestFunction.NewGenerator()
+// 	if _, err := digestGenerator.Write(data); err != nil {
+// 		panic(err)
+// 	}
+// 	return digestGenerator.Sum(), nil
+// }

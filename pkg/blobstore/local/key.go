@@ -1,7 +1,7 @@
 package local
 
 import (
-	"crypto/sha256"
+	"github.com/minio/sha256-simd"
 )
 
 // Key is the key type for objects managed by KeyLocationMap.

@@ -67,7 +67,7 @@ func (ba *referenceExpandingBlobAccess) Get(ctx context.Context, digest digest.D
 	}
 	reference := referenceMessage.(*icas.Reference)
 
-	r, err := ba.GetReader(reference)
+	r, err := ba.GetReader(ctx, reference)
 	if err != nil {
 		return buffer.NewBufferFromError(util.StatusWrap(err, "Failed to fetch reference"))
 	}
@@ -112,15 +112,14 @@ func (ba *referenceExpandingBlobAccess) Get(ctx context.Context, digest digest.D
 	return buffer.NewCASBufferFromReader(digest, r, buffer.BackendProvided(buffer.Irreparable(digest)))
 }
 
-<<<<<<< HEAD
 func (ba *referenceExpandingBlobAccess) GetFromComposite(ctx context.Context, parentDigest, childDigest digest.Digest, slicer slicing.BlobSlicer) buffer.Buffer {
 	b, _ := slicer.Slice(ba.Get(ctx, parentDigest), childDigest)
 	return b
-=======
-func (ba *referenceExpandingBlobAccess) GetReader(reference *icas.Reference) (io.ReadCloser, error) {
+}
+
+func (ba *referenceExpandingBlobAccess) GetReader(ctx context.Context, reference *icas.Reference) (io.ReadCloser, error) {
 	// Load the object from the appropriate data store.
 	var r io.ReadCloser
-	ctx := context.TODO()
 	switch medium := reference.Medium.(type) {
 	case *icas.Reference_HttpUrl:
 		// Download the object through HTTP.
@@ -156,7 +155,7 @@ func (ba *referenceExpandingBlobAccess) GetReader(reference *icas.Reference) (io
 		}
 		reader, err := ba.gcsClient.Bucket(medium.Gcs.Bucket).Object(medium.Gcs.Key).NewRangeReader(ctx, reference.OffsetBytes, length)
 		if err != nil {
-			return nil, util.StatusWrapWithCode(err, codes.Internal, "GCS request failed")
+			return nil, util.StatusWrapfWithCode(err, codes.Internal, "GCS request[%s/%s] failed", medium.Gcs.Bucket, medium.Gcs.Key)
 		}
 		r = reader
 	case *icas.Reference_GoogleDrive_:
@@ -175,7 +174,6 @@ func (ba *referenceExpandingBlobAccess) GetReader(reference *icas.Reference) (io
 		return nil, status.Error(codes.Unimplemented, "Reference uses an unsupported medium")
 	}
 	return r, nil
->>>>>>> c4013f0 (icas work)
 }
 
 func (ba *referenceExpandingBlobAccess) Put(ctx context.Context, digest digest.Digest, b buffer.Buffer) error {
