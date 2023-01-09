@@ -5,7 +5,7 @@ def container_push_official(name, image, component):
         name = name,
         format = "Docker",
         image = image,
-        registry = "us.gcr.io/farsight-ci",
+        registry = "us-docker.pkg.dev/farsight-ci",
         repository = "buildbarn/" + component,
         tag = "{BUILD_SCM_TIMESTAMP}-{BUILD_SCM_REVISION}",
     )
